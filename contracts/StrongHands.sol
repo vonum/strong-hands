@@ -8,12 +8,8 @@ import "./interfaces/IWETHGateway.sol";
 import "./interfaces/IAToken.sol";
 
 contract StrongHands is Ownable {
-    struct LockPeriod {
-        uint256 startTimestamp;
-        uint256 endTimestamp; // don't need end timestamp
-    }
-
     uint256 public constant BASIS_POINT = 100;
+
     uint256 public immutable timeframe;
     IWETHGateway public immutable gateway;
     IAToken public immutable aWETH;
@@ -24,7 +20,7 @@ contract StrongHands is Ownable {
     uint256 public totalDepositors; // not needed?
 
     mapping(address => uint256) public deposits;
-    mapping(address => LockPeriod) public lockPeriods;
+    mapping(address => uint256) public lockPeriods;
     address[] public depositors;
 
     event Deposited(address sender, uint256 value, uint256 lockedUntil);
@@ -56,9 +52,9 @@ contract StrongHands is Ownable {
 
         totalDeposit += msg.value;
         deposits[msg.sender] += msg.value;
-        lockPeriods[msg.sender] = LockPeriod(block.timestamp, block.timestamp + timeframe);
+        lockPeriods[msg.sender] = block.timestamp;
 
-        emit Deposited(msg.sender, msg.value, lockPeriods[msg.sender].endTimestamp);
+        emit Deposited(msg.sender, msg.value, block.timestamp + timeframe);
     }
 
     function withdraw() public returns(bool) {
@@ -69,13 +65,13 @@ contract StrongHands is Ownable {
         uint256 penalty;
         uint256 userReturn;
 
-        if (block.timestamp > lockPeriods[msg.sender].endTimestamp) {
+        if (block.timestamp > lockPeriods[msg.sender] + timeframe) {
             uint256 portionOfPenalty = _portionOfPenalty(deposits[msg.sender], penalties);
             penalties -= portionOfPenalty;
 
             userReturn = userDeposit + portionOfPenalty;
         } else {
-            penalty = _penalty(userDeposit, lockPeriods[msg.sender].startTimestamp);
+            penalty = _penalty(userDeposit, lockPeriods[msg.sender]);
             penalties += penalty;
             userReturn = userDeposit - penalty;
         }

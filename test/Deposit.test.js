@@ -58,9 +58,9 @@ describe("StrongHands", () => {
     const tx = this.contract.deposit({value: 100});
     const block = await ethers.provider.getBlock(tx.blockNumber);
     const lockPeriod = await this.contract.lockPeriods(user.address);
-    const endTimestamp = lockPeriod.endTimestamp.toNumber();
+    const startTimestamp = lockPeriod.toNumber();
 
-    expect(endTimestamp).to.eq(block.timestamp + 100 + 1);
+    expect(startTimestamp).to.be.closeTo(block.timestamp, 1);
   });
 
   it("Emits event when users deposit", async () => {
