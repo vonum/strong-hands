@@ -17,7 +17,7 @@ contract StrongHands is Ownable {
 
     uint256 public totalDeposit;
     uint256 public penalties;
-    uint256 public totalDepositors; // not needed?
+    uint256 public totalDepositors;
 
     mapping(address => uint256) public deposits;
     mapping(address => uint256) public lockPeriods;
@@ -43,11 +43,14 @@ contract StrongHands is Ownable {
     function deposit() public payable {
         require(msg.value > 0, "Deposited 0 ethers");
 
+        // Add depositor new depositor if he has no ether deposited
+        // user's can deposit multiple times
         if (deposits[msg.sender] == 0) {
             totalDepositors++;
             depositors.push(msg.sender);
         }
 
+        // Deposit eth for contract's address
         gateway.depositETH{value: msg.value}(lendingPoolAddress, address(this), 0);
 
         totalDeposit += msg.value;
@@ -65,11 +68,13 @@ contract StrongHands is Ownable {
         uint256 penalty;
         uint256 userReturn;
 
+        // Lock period has passed -> return deposit + rewards
         if (block.timestamp > lockPeriods[msg.sender] + timeframe) {
             uint256 portionOfPenalty = _portionOfPenalty(deposits[msg.sender], penalties);
             penalties -= portionOfPenalty;
 
             userReturn = userDeposit + portionOfPenalty;
+        // Lock period hasn't passed -> return deposit - penalty
         } else {
             penalty = _penalty(userDeposit, lockPeriods[msg.sender]);
             penalties += penalty;
